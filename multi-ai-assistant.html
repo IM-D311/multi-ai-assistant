@@ -735,52 +735,6 @@
         </div>
     </div>
 
-    <!-- API Configuration Modal (Only for admin) -->
-    <div id="apiConfigModal" class="modal">
-        <div class="modal-content">
-            <h2><i class="fas fa-key"></i> Admin API Configuration</h2>
-            <p>Only admin can configure API keys</p>
-            
-            <div class="api-input-group">
-                <label>
-                    <i class="fab fa-openai"></i> OpenAI API Key
-                </label>
-                <div class="key-status" id="openaiStatus">
-                    <i class="fas fa-question-circle"></i> Checking...
-                </div>
-            </div>
-            
-            <div class="api-input-group">
-                <label>
-                    <i class="fas fa-code"></i> DeepSeek API Key
-                </label>
-                <div class="key-status" id="deepseekStatus">
-                    <i class="fas fa-question-circle"></i> Checking...
-                </div>
-            </div>
-            
-            <div class="api-input-group">
-                <label>
-                    <i class="fab fa-google"></i> Gemini API Key
-                </label>
-                <div class="key-status" id="geminiStatus">
-                    <i class="fas fa-question-circle"></i> Checking...
-                </div>
-            </div>
-            
-            <div class="modal-buttons">
-                <button id="closeModal" class="secondary-btn">
-                    Close
-                </button>
-            </div>
-            
-            <p class="note">
-                <i class="fas fa-user-shield"></i> 
-                Only admin (imulla311@gmail.com) can access these settings.
-            </p>
-        </div>
-    </div>
-
     <header>
         <div class="container">
             <div class="header-content">
@@ -912,62 +866,24 @@
         // ========== REMEMBER ME SETTINGS ==========
         const REMEMBER_DAYS = 30; // Remember for 30 days
         
-        // ========== BASE64 ENCODED API KEYS ==========
-        // !!! IMPORTANT: ENCODE YOUR OWN API KEYS !!!
-        // Step 1: Get your API keys from:
-        // - OpenAI: platform.openai.com/api-keys
-        // - DeepSeek: platform.deepseek.com/api_keys
-        // - Gemini: makersuite.google.com/app/apikey
-        
-        // Step 2: Encode each key to Base64 by opening browser console (F12)
-        // and running: btoa("your-api-key-here")
-        // Example: btoa("sk-abc123...") gives "c2stYWJjMTIz..."
-        
-        // Step 3: Paste the encoded strings below:
-        const ENCODED_API_KEYS = {
-            // Replace with your Base64 encoded OpenAI API key
-            openai: "4753810923476a08a299fb15c91f7806e36741bfd0523237af90f048a1a4232b",
+        // ========== YOUR REAL API KEYS ==========
+        // REPLACE THESE WITH YOUR ACTUAL API KEYS:
+        const ADMIN_API_KEYS = {
+            // Get from: https://platform.openai.com/api-keys
+            openai: "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",
             
-            // Replace with your Base64 encoded DeepSeek API key
-            deepseek: "050d1ed04b61475b087b0c635d45d2609540d9ed8e361956fb575877cfe389a5",
+            // Get from: https://platform.deepseek.com/api_keys
+            deepseek: "sk-52c9708e3cc842ffb7422a18b7df8417",
             
-            // Replace with your Base64 encoded Gemini API key
-            gemini: "0a785521b783a5f4ce58ab6520a78ed399f369bcd0a3ba8b144c2df75314acc0"
+            // Get from: https://makersuite.google.com/app/apikey
+            gemini: "AIzaSyCTsqvFAMSyXNaaN-M6Z19waU8wnnUJEfs"
         };
-        
-        // Decoded API Keys (will be populated on load)
-        let ADMIN_API_KEYS = {
-            openai: "",
-            deepseek: "",
-            gemini: ""
-        };
-        
-        // Function to decode Base64 API keys
-        function decodeAPIKeys() {
-            try {
-                ADMIN_API_KEYS.openai = atob(ENCODED_API_KEYS.openai);
-                ADMIN_API_KEYS.deepseek = atob(ENCODED_API_KEYS.deepseek);
-                ADMIN_API_KEYS.gemini = atob(ENCODED_API_KEYS.gemini);
-                
-                console.log('API keys decoded successfully');
-                return true;
-            } catch (error) {
-                console.error('Error decoding API keys:', error);
-                // Fallback to demo mode if decoding fails
-                ADMIN_API_KEYS = {
-                    openai: "demo",
-                    deepseek: "demo", 
-                    gemini: "demo"
-                };
-                return false;
-            }
-        }
         
         // ========== CONFIGURATION ==========
         const CORS_PROXIES = [
+            'https://corsproxy.io/?',
             'https://api.allorigins.win/raw?url=',
-            'https://thingproxy.freeboard.io/fetch/',
-            'https://corsproxy.io/?'
+            'https://thingproxy.freeboard.io/fetch/'
         ];
         
         let currentProxyIndex = 0;
@@ -975,7 +891,6 @@
         let isLoggedIn = false;
         let selectedAI = 'auto';
         let isProcessing = false;
-        let apiMode = 'demo'; // Start in demo mode until API keys are verified
         let currentUserEmail = '';
         
         // ========== DOM ELEMENTS ==========
@@ -990,9 +905,7 @@
         const statusText = document.getElementById('statusText');
         const apiModeIndicator = document.getElementById('apiMode');
         const apiStatusText = document.getElementById('apiStatusText');
-        const apiConfigModal = document.getElementById('apiConfigModal');
         const openApiConfigBtn = document.getElementById('openApiConfig');
-        const closeModalBtn = document.getElementById('closeModal');
         const quickLoginBtn = document.getElementById('quickLogin');
         const siteTitle = document.getElementById('siteTitle');
         
@@ -1004,16 +917,8 @@
         const loginError = document.getElementById('loginError');
         const rememberMeCheckbox = document.getElementById('rememberMe');
         
-        // API Status elements
-        const openaiStatus = document.getElementById('openaiStatus');
-        const deepseekStatus = document.getElementById('deepseekStatus');
-        const geminiStatus = document.getElementById('geminiStatus');
-        
         // ========== INITIALIZATION ==========
         document.addEventListener('DOMContentLoaded', () => {
-            // First decode API keys
-            const keysDecoded = decodeAPIKeys();
-            
             setupEventListeners();
             
             // Auto-resize textarea
@@ -1026,15 +931,13 @@
             checkExistingLogin();
             
             // Pre-fill remember me if previously checked
-            const rememberMe = getRememberMePreference();
+            const rememberMe = localStorage.getItem('multiAI_rememberMe') === 'true';
             if (rememberMeCheckbox) {
                 rememberMeCheckbox.checked = rememberMe;
             }
             
-            // Check API keys configuration
-            if (keysDecoded) {
-                setTimeout(checkApiKeysConfiguration, 1000);
-            }
+            // Show status
+            console.log('Multi-AI Assistant initialized with real API keys');
         });
         
         // ========== USER-SPECIFIC STORAGE ==========
@@ -1097,7 +1000,6 @@
                         isAdmin = data.isAdmin || false;
                         loginModal.classList.remove('active');
                         updateUIForLoggedInUser(isAdmin);
-                        updateApiStatus();
                         
                         showNotification(isAdmin ? 
                             'Welcome back Admin!' : 
@@ -1130,170 +1032,6 @@
                     sessionStorage.removeItem(key);
                 }
             });
-        }
-        
-        // ========== API KEY CONFIGURATION CHECK ==========
-        async function checkApiKeysConfiguration() {
-            // Check if API keys are demo or empty
-            const hasDemoKeys = ADMIN_API_KEYS.openai === "demo" || 
-                               ADMIN_API_KEYS.deepseek === "demo" || 
-                               ADMIN_API_KEYS.gemini === "demo";
-            
-            if (hasDemoKeys) {
-                apiMode = 'demo';
-                updateApiStatusUI('All APIs', 'Demo mode - Add your keys', 'invalid');
-                console.log('Running in demo mode. Add your API keys.');
-                return;
-            }
-            
-            // Test each API key
-            await testOpenAIKey();
-            await testDeepSeekKey();
-            await testGeminiKey();
-            
-            // Check if at least one API key is working
-            const openaiValid = !openaiStatus.classList.contains('invalid');
-            const deepseekValid = !deepseekStatus.classList.contains('invalid');
-            const geminiValid = !geminiStatus.classList.contains('invalid');
-            
-            if (openaiValid || deepseekValid || geminiValid) {
-                apiMode = 'real';
-                console.log('Real API mode enabled. At least one API key is working.');
-            } else {
-                apiMode = 'demo';
-                console.log('No valid API keys found. Running in demo mode.');
-            }
-        }
-        
-        async function testOpenAIKey() {
-            const key = ADMIN_API_KEYS.openai;
-            if (!key || key === "demo") {
-                updateApiStatusUI('OpenAI', 'Not configured', 'invalid');
-                return;
-            }
-            
-            try {
-                // Simple test - list models endpoint
-                const response = await fetchWithFallback('https://api.openai.com/v1/models', {
-                    headers: {
-                        'Authorization': `Bearer ${key}`,
-                        'Content-Type': 'application/json'
-                    }
-                });
-                
-                if (response.ok) {
-                    updateApiStatusUI('OpenAI', 'Valid', 'valid');
-                } else {
-                    updateApiStatusUI('OpenAI', `Error: ${response.status}`, 'invalid');
-                }
-            } catch (error) {
-                console.error('OpenAI test failed:', error);
-                updateApiStatusUI('OpenAI', 'Connection failed', 'invalid');
-            }
-        }
-        
-        async function testDeepSeekKey() {
-            const key = ADMIN_API_KEYS.deepseek;
-            if (!key || key === "demo") {
-                updateApiStatusUI('DeepSeek', 'Not configured', 'invalid');
-                return;
-            }
-            
-            try {
-                // Test with a simple completion
-                const response = await fetchWithFallback('https://api.deepseek.com/v1/chat/completions', {
-                    method: 'POST',
-                    headers: {
-                        'Authorization': `Bearer ${key}`,
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        model: 'deepseek-chat',
-                        messages: [{ role: 'user', content: 'test' }],
-                        max_tokens: 1
-                    })
-                });
-                
-                if (response.status === 200 || response.status === 401) {
-                    // 401 means key is valid but might need different endpoint
-                    updateApiStatusUI('DeepSeek', 'Valid', 'valid');
-                } else {
-                    updateApiStatusUI('DeepSeek', `Error: ${response.status}`, 'invalid');
-                }
-            } catch (error) {
-                console.error('DeepSeek test failed:', error);
-                updateApiStatusUI('DeepSeek', 'Connection failed', 'invalid');
-            }
-        }
-        
-        async function testGeminiKey() {
-            const key = ADMIN_API_KEYS.gemini;
-            if (!key || key === "demo") {
-                updateApiStatusUI('Gemini', 'Not configured', 'invalid');
-                return;
-            }
-            
-            try {
-                // Test with models list
-                const response = await fetchWithFallback(`https://generativelanguage.googleapis.com/v1beta/models?key=${key}`);
-                
-                if (response.ok) {
-                    updateApiStatusUI('Gemini', 'Valid', 'valid');
-                } else {
-                    updateApiStatusUI('Gemini', `Error: ${response.status}`, 'invalid');
-                }
-            } catch (error) {
-                console.error('Gemini test failed:', error);
-                updateApiStatusUI('Gemini', 'Connection failed', 'invalid');
-            }
-        }
-        
-        function updateApiStatusUI(apiName, message, status) {
-            let element;
-            switch(apiName) {
-                case 'OpenAI': element = openaiStatus; break;
-                case 'DeepSeek': element = deepseekStatus; break;
-                case 'Gemini': element = geminiStatus; break;
-                default: return;
-            }
-            
-            element.innerHTML = status === 'valid' 
-                ? `<i class="fas fa-check-circle"></i> ${message}`
-                : `<i class="fas fa-times-circle"></i> ${message}`;
-            element.className = `key-status ${status}`;
-        }
-        
-        async function fetchWithFallback(url, options = {}) {
-            try {
-                // Try direct fetch first
-                const response = await fetch(url, options);
-                return response;
-            } catch (error) {
-                console.log('Direct fetch failed, trying CORS proxy...');
-                
-                // Try with CORS proxy
-                const proxyUrl = CORS_PROXIES[currentProxyIndex] + encodeURIComponent(url);
-                const proxyOptions = {
-                    ...options,
-                    headers: {
-                        ...options.headers,
-                        'Content-Type': 'application/json'
-                    }
-                };
-                
-                try {
-                    const response = await fetch(proxyUrl, proxyOptions);
-                    if (!response.ok) {
-                        // Try next proxy
-                        currentProxyIndex = (currentProxyIndex + 1) % CORS_PROXIES.length;
-                        throw new Error('Proxy failed');
-                    }
-                    return response;
-                } catch (proxyError) {
-                    console.error('All fetch attempts failed:', proxyError);
-                    throw error;
-                }
-            }
         }
         
         function setupEventListeners() {
@@ -1345,20 +1083,7 @@
             if (openApiConfigBtn) {
                 openApiConfigBtn.addEventListener('click', () => {
                     if (isAdmin) {
-                        apiConfigModal.classList.add('active');
-                    }
-                });
-            }
-            
-            if (closeModalBtn) {
-                closeModalBtn.addEventListener('click', () => apiConfigModal.classList.remove('active'));
-            }
-            
-            // Close modal on outside click
-            if (apiConfigModal) {
-                apiConfigModal.addEventListener('click', (e) => {
-                    if (e.target === apiConfigModal) {
-                        apiConfigModal.classList.remove('active');
+                        showNotification('API keys are configured and active', 'info');
                     }
                 });
             }
@@ -1414,7 +1139,6 @@
             
             // Update UI
             updateUIForLoggedInUser(isAdminUser);
-            updateApiStatus();
             
             showNotification(isAdminUser ? 
                 'Admin logged in successfully!' : 
@@ -1508,6 +1232,7 @@
                 if (openApiConfigBtn) {
                     openApiConfigBtn.style.display = 'block';
                 }
+                apiStatusText.textContent = 'Admin Mode - All APIs Active';
                 apiModeIndicator.innerHTML = '<i class="fas fa-user-shield"></i> Admin Mode';
                 apiModeIndicator.className = 'api-mode-indicator active';
                 aiDescription.textContent = 'Admin mode - All AI services available';
@@ -1517,34 +1242,19 @@
                 if (openApiConfigBtn) {
                     openApiConfigBtn.style.display = 'none';
                 }
+                apiStatusText.textContent = 'Public Mode - Real AI Access';
                 apiModeIndicator.innerHTML = '<i class="fas fa-plug"></i> Public Mode';
                 apiModeIndicator.className = 'api-mode-indicator active';
-                aiDescription.textContent = 'Public access - Shared AI services';
+                aiDescription.textContent = 'Public access - Real AI services';
             }
-            
-            // Update API status
-            updateApiStatus();
             
             // Add welcome message to chat
             const rememberMe = rememberMeCheckbox ? rememberMeCheckbox.checked : false;
-            const apiModeText = apiMode === 'demo' ? ' (Demo Mode)' : ' (Real AI Mode)';
             const welcomeMsg = isAdminUser 
-                ? `Welcome Admin! You have full access to all AI services.${apiModeText} ${rememberMe ? '(Remembered for 30 days)' : ''}`
-                : `Welcome! You can now use the AI assistant with shared access.${apiModeText} ${rememberMe ? '(Remembered for 30 days)' : ''}`;
+                ? `Welcome Admin! You have full access to all AI services. ${rememberMe ? '(Remembered for 30 days)' : ''}`
+                : `Welcome! You can now use the AI assistant with real AI access. ${rememberMe ? '(Remembered for 30 days)' : ''}`;
             
             addMessage(welcomeMsg, 'ai', 'system');
-        }
-        
-        function updateApiStatus() {
-            if (apiMode === 'real') {
-                apiStatusText.textContent = isAdmin 
-                    ? 'Admin Mode - Real API Access' 
-                    : 'Public Mode - Real AI Access';
-            } else {
-                apiStatusText.textContent = isAdmin 
-                    ? 'Admin Mode - Demo API (Configure keys for real access)' 
-                    : 'Public Mode - Demo AI Responses';
-            }
         }
         
         // ========== AI SELECTION LOGIC ==========
@@ -1657,43 +1367,33 @@
             updateStatus('processing', `Processing with ${aiToUse}...`);
             
             try {
-                let response;
-                if (apiMode === 'real' && isLoggedIn) {
-                    try {
-                        // Use admin's API keys for all users
-                        response = await callRealAPI(message, aiToUse);
-                        showNotification(`${aiToUse} response received`, 'info');
-                    } catch (apiError) {
-                        console.error('API Error:', apiError);
-                        // Fall back to demo mode if API fails
-                        response = generateDemoResponse(message, aiToUse);
-                        showNotification('API failed. Using demo responses.', 'info');
-                    }
-                } else {
-                    // Use demo mode
-                    await new Promise(resolve => setTimeout(resolve, 1000));
-                    response = generateDemoResponse(message, aiToUse);
-                    if (apiMode === 'demo') {
-                        showNotification('Demo response (Add your API keys)', 'info');
-                    }
-                }
+                // Always use real API calls (no demo mode)
+                const response = await callRealAPI(message, aiToUse);
                 
                 removeTypingIndicator();
                 addMessage(response, 'ai', aiToUse);
                 updateStatus('ready', 'Ready');
+                showNotification(`${aiToUse} response received`, 'info');
                 
             } catch (error) {
-                console.error('General Error:', error);
+                console.error('API Error:', error);
                 removeTypingIndicator();
-                // More user-friendly error message
-                const errorMsg = `I encountered an issue while processing your request. ${
-                    apiMode === 'real' 
-                    ? 'The AI service might be temporarily unavailable. Please try again in a moment.' 
-                    : 'Please check your API configuration or try again later.'
-                }`;
+                
+                // Specific error messages
+                let errorMsg = '';
+                if (error.message.includes('API key not configured')) {
+                    errorMsg = `The ${aiToUse} API key is not configured. Please check your API settings.`;
+                } else if (error.message.includes('Failed to fetch')) {
+                    errorMsg = `Network error. Please check your internet connection and try again.`;
+                } else if (error.message.includes('rate limit')) {
+                    errorMsg = `API rate limit exceeded. Please wait a moment and try again.`;
+                } else {
+                    errorMsg = `Error: ${error.message}. Please try again.`;
+                }
+                
                 addMessage(errorMsg, 'ai', aiToUse);
-                updateStatus('error', 'Processing Error');
-                showNotification('Failed to get response. Please try again.', 'error');
+                updateStatus('error', 'API Error');
+                showNotification('Failed to get response', 'error');
                 
             } finally {
                 isProcessing = false;
@@ -1704,19 +1404,11 @@
         
         // ========== REAL API CALLS ==========
         async function callRealAPI(message, aiType) {
-            // Check if API keys are demo
-            if (ADMIN_API_KEYS.openai === "demo" || 
-                ADMIN_API_KEYS.deepseek === "demo" || 
-                ADMIN_API_KEYS.gemini === "demo") {
-                throw new Error('API keys not configured. Running in demo mode.');
-            }
-            
             let url, headers, body;
             
-            // Use admin's API keys for all logged-in users
             switch(aiType) {
                 case 'chatgpt':
-                    if (!ADMIN_API_KEYS.openai || ADMIN_API_KEYS.openai === "demo") {
+                    if (!ADMIN_API_KEYS.openai || !ADMIN_API_KEYS.openai.startsWith('sk-')) {
                         throw new Error('OpenAI API key not configured');
                     }
                     url = 'https://api.openai.com/v1/chat/completions';
@@ -1727,13 +1419,13 @@
                     body = JSON.stringify({
                         model: 'gpt-3.5-turbo',
                         messages: [{ role: 'user', content: message }],
-                        max_tokens: 1000,
+                        max_tokens: 2000,
                         temperature: 0.7
                     });
                     break;
                     
                 case 'deepseek':
-                    if (!ADMIN_API_KEYS.deepseek || ADMIN_API_KEYS.deepseek === "demo") {
+                    if (!ADMIN_API_KEYS.deepseek || !ADMIN_API_KEYS.deepseek.startsWith('sk-')) {
                         throw new Error('DeepSeek API key not configured');
                     }
                     url = 'https://api.deepseek.com/chat/completions';
@@ -1744,13 +1436,13 @@
                     body = JSON.stringify({
                         model: 'deepseek-chat',
                         messages: [{ role: 'user', content: message }],
-                        max_tokens: 1000,
+                        max_tokens: 2000,
                         temperature: 0.7
                     });
                     break;
                     
                 case 'gemini':
-                    if (!ADMIN_API_KEYS.gemini || ADMIN_API_KEYS.gemini === "demo") {
+                    if (!ADMIN_API_KEYS.gemini || !ADMIN_API_KEYS.gemini.startsWith('AIza')) {
                         throw new Error('Gemini API key not configured');
                     }
                     url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${ADMIN_API_KEYS.gemini}`;
@@ -1760,7 +1452,7 @@
                             parts: [{ text: message }]
                         }],
                         generationConfig: {
-                            maxOutputTokens: 1000,
+                            maxOutputTokens: 2000,
                             temperature: 0.7
                         }
                     });
@@ -1768,38 +1460,64 @@
             }
             
             try {
-                const response = await fetchWithFallback(url, {
+                // Try direct API call first
+                const response = await fetch(url, {
                     method: 'POST',
                     headers,
                     body
                 });
                 
                 if (!response.ok) {
-                    const errorText = await response.text();
-                    console.error('API Error Response:', errorText);
-                    throw new Error(`API Error: ${response.status} ${response.statusText}`);
+                    const errorData = await response.json().catch(() => ({}));
+                    throw new Error(`API Error ${response.status}: ${errorData.error?.message || response.statusText}`);
                 }
                 
                 const data = await response.json();
                 
                 // Parse response based on AI type
                 if (aiType === 'gemini') {
-                    if (data.candidates && data.candidates[0] && data.candidates[0].content && data.candidates[0].content.parts[0]) {
-                        return data.candidates[0].content.parts[0].text;
-                    } else {
-                        throw new Error('Invalid Gemini API response format');
-                    }
+                    return data.candidates[0].content.parts[0].text;
                 } else {
-                    if (data.choices && data.choices[0] && data.choices[0].message) {
-                        return data.choices[0].message.content;
-                    } else {
-                        throw new Error('Invalid API response format');
-                    }
+                    return data.choices[0].message.content;
                 }
                 
-            } catch (error) {
-                console.error(`API call failed for ${aiType}:`, error);
-                throw error;
+            } catch (directError) {
+                console.error('Direct API call failed:', directError);
+                
+                // Try with CORS proxy
+                try {
+                    return await callWithCorsProxy(url, headers, body, aiType);
+                } catch (proxyError) {
+                    console.error('CORS proxy also failed:', proxyError);
+                    throw directError; // Throw original error
+                }
+            }
+        }
+        
+        async function callWithCorsProxy(url, headers, body, aiType) {
+            const proxyUrl = CORS_PROXIES[currentProxyIndex] + encodeURIComponent(url);
+            
+            const response = await fetch(proxyUrl, {
+                method: 'POST',
+                headers: {
+                    ...headers,
+                    'Content-Type': 'application/json'
+                },
+                body
+            });
+            
+            if (!response.ok) {
+                // Try next proxy
+                currentProxyIndex = (currentProxyIndex + 1) % CORS_PROXIES.length;
+                throw new Error(`Service temporarily unavailable`);
+            }
+            
+            const data = await response.json();
+            
+            if (aiType === 'gemini') {
+                return data.candidates[0].content.parts[0].text;
+            } else {
+                return data.choices[0].message.content;
             }
         }
         
@@ -1925,75 +1643,6 @@
                 setTimeout(() => notification.remove(), 300);
             }, 3000);
         }
-        
-        // ========== DEMO MODE ==========
-        function generateDemoResponse(query, ai) {
-            // More realistic demo responses
-            const responses = {
-                chatgpt: [
-                    `Here's a ChatGPT-style response to: "${query}"\n\nAs ChatGPT, I would analyze this question carefully. It seems you're asking about a topic that requires nuanced understanding. In a real response, I would:\n1. Break down the key concepts\n2. Provide relevant examples\n3. Offer practical applications\n4. Suggest additional resources if needed\n\nFor this specific query, I would focus on delivering clear, well-structured information that addresses your core concerns while maintaining accuracy and helpfulness.`,
-                    `Based on your question about "${query.substring(0, 40)}...", here's how ChatGPT would respond:\n\nI understand you're looking for information on this topic. Let me provide you with a comprehensive overview:\n\n• First, I'd establish the context and key definitions\n• Then, I'd explore the main aspects of the topic\n• Next, I'd provide practical examples or case studies\n• Finally, I'd offer actionable advice or next steps\n\nThis structured approach ensures you get both breadth and depth in the response.`,
-                    `Your question "${query.substring(0, 50)}..." appears to involve analytical thinking. ChatGPT excels at this type of inquiry by:\n\n1. Identifying underlying assumptions\n2. Examining multiple perspectives\n3. Synthesizing information from various angles\n4. Presenting balanced conclusions\n\nIn a full response, you'd receive detailed explanations with supporting evidence and clear reasoning at each step.`
-                ],
-                deepseek: [
-                    `As DeepSeek, I'd approach "${query}" with a technical focus. Here's what a real response would include:\n\n\`\`\`javascript
-// Example code structure for this type of problem
-function analyzeQuery(input) {
-    // Parse and process the query
-    const tokens = input.split(' ');
-    const analysis = tokens.map(token => {
-        return {
-            token,
-            length: token.length,
-            type: classifyToken(token)
-        };
-    });
-    
-    // Return structured analysis
-    return {
-        query: input,
-        analysis: analysis,
-        suggestions: generateSuggestions(analysis)
-    };
-}
-\`\`\`\n\nFor technical queries, DeepSeek provides code examples, algorithm explanations, and step-by-step debugging guidance.`,
-                    `Technical analysis of: "${query.substring(0, 40)}..."\n\n**Problem Breakdown:**\n1. Identify core technical requirements\n2. Analyze potential solutions\n3. Consider edge cases and optimization\n4. Provide implementation guidance\n\n**Example Approach:**\n\`\`\`python
-def solve_problem(query):
-    # Parse technical requirements
-    requirements = extract_requirements(query)
-    
-    # Design algorithm
-    algorithm = design_algorithm(requirements)
-    
-    # Implement with error handling
-    try:
-        result = execute_algorithm(algorithm)
-        return optimize_result(result)
-    except Exception as e:
-        return handle_error(e, algorithm)
-\`\`\`\n\nDeepSeek specializes in practical, implementable solutions.`,
-                    `For "${query.substring(0, 30)}...", DeepSeek would provide:\n\n**Technical Analysis:**\n- Algorithm complexity considerations\n- Memory and performance implications\n- Best practices and patterns\n- Testing and validation strategies\n\n**Code Example:**\n\`\`\`
-// Pseudo-code for solution architecture
-interface Solution {
-    design: Architecture;
-    implement: (spec: Spec) => Code;
-    test: (input: TestCase[]) => Results;
-    optimize: (metrics: Metrics) => ImprovedSolution;
-}
-\`\`\`\n\nExpect detailed technical explanations with working code snippets.`
-            ],
-            gemini: [
-                `As Gemini, I'd analyze "${query}" with visual and multimodal capabilities. Here's how I'd approach it:\n\n**Visual Analysis Framework:**\n1. Image/Pattern Recognition\n2. Contextual Understanding\n3. Multimodal Integration\n4. Creative Generation\n\n**For this query, I would:**\n• Identify visual elements if images were provided\n• Analyze spatial relationships and patterns\n• Provide descriptive interpretations\n• Suggest visual enhancements or alternatives\n\nGemini excels at combining visual understanding with textual analysis.`,
-                `Multimodal response to: "${query.substring(0, 40)}..."\n\n**If this involves images, I would:**\n1. Detect objects, scenes, and text in images\n2. Analyze colors, compositions, and visual styles\n3. Provide descriptive captions and interpretations\n4. Suggest related visual concepts or modifications\n\n**Example visual analysis structure:**\n- **Primary Subjects:** [Identified objects/people]\n- **Visual Style:** [Artistic characteristics]\n- **Color Palette:** [Dominant colors and tones]\n- **Composition:** [Layout and spatial arrangement]\n- **Context:** [Cultural or situational interpretation]`,
-                `Your query "${query.substring(0, 30)}..." suggests visual/multimodal interest. Gemini's response would include:\n\n**Image Understanding Components:**\n• Object detection and classification\n• Scene understanding and context\n• Text extraction from images (OCR)\n• Visual similarity and pattern matching\n\n**Creative Capabilities:**\n• Image description and alt-text generation\n• Visual concept explanation\n• Multimodal content suggestions\n• Cross-modal connections between text and images\n\nGemini bridges visual and textual domains effectively.`
-            ]
-        };
-        
-        const aiResponses = responses[ai] || responses.chatgpt;
-        const randomIndex = Math.floor(Math.random() * aiResponses.length);
-        
-        return aiResponses[randomIndex];
-    }
-</script>
+    </script>
 </body>
 </html>
