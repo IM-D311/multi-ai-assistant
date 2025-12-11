@@ -864,7 +864,7 @@
         const ADMIN_PASSWORD = "Imulla@311";
         
         // ========== REMEMBER ME SETTINGS ==========
-        const REMEMBER_DAYS = 30; // Remember for 30 days
+        const REMEMBER_DAYS = 30;
         
         // ========== YOUR REAL API KEYS ==========
         // REPLACE THESE WITH YOUR ACTUAL API KEYS:
@@ -879,11 +879,13 @@
             gemini: "AIzaSyCTsqvFAMSyXNaaN-M6Z19waU8wnnUJEfs"
         };
         
-        // ========== CONFIGURATION ==========
+        // ========== IMPROVED CORS PROXIES ==========
         const CORS_PROXIES = [
+            // Working CORS proxies
+            'https://api.codetabs.com/v1/proxy?quest=',
             'https://corsproxy.io/?',
-            'https://api.allorigins.win/raw?url=',
-            'https://thingproxy.freeboard.io/fetch/'
+            'https://proxy.cors.sh/',
+            'https://api.allorigins.win/raw?url='
         ];
         
         let currentProxyIndex = 0;
@@ -936,20 +938,22 @@
                 rememberMeCheckbox.checked = rememberMe;
             }
             
-            // Show status
-            console.log('Multi-AI Assistant initialized with real API keys');
+            console.log('Multi-AI Assistant initialized');
+            console.log('API Keys Status:', {
+                hasOpenAI: !!ADMIN_API_KEYS.openai && ADMIN_API_KEYS.openai.startsWith('sk-'),
+                hasDeepSeek: !!ADMIN_API_KEYS.deepseek && ADMIN_API_KEYS.deepseek.startsWith('sk-'),
+                hasGemini: !!ADMIN_API_KEYS.gemini && ADMIN_API_KEYS.gemini.startsWith('AIza')
+            });
         });
         
         // ========== USER-SPECIFIC STORAGE ==========
         function getUserStorageKey(key) {
             if (!currentUserEmail) return key;
-            // Create a unique key for each user using their email
             const userHash = btoa(currentUserEmail).replace(/[^a-zA-Z0-9]/g, '_');
             return `multiAI_${userHash}_${key}`;
         }
         
         function getRememberMePreference() {
-            // Global preference (not user-specific)
             return localStorage.getItem('multiAI_rememberMe') === 'true';
         }
         
@@ -961,40 +965,32 @@
             };
             
             if (rememberMe) {
-                // Long-term storage (30 days)
                 const expiryDate = new Date();
                 expiryDate.setDate(expiryDate.getDate() + REMEMBER_DAYS);
                 userData.expiry = expiryDate.getTime();
                 
                 localStorage.setItem(getUserStorageKey('loginData'), JSON.stringify(userData));
-                // Save global remember me preference
                 localStorage.setItem('multiAI_rememberMe', 'true');
             } else {
-                // Session-only storage (cleared when browser closes)
                 sessionStorage.setItem(getUserStorageKey('loginData'), JSON.stringify(userData));
                 localStorage.setItem('multiAI_rememberMe', 'false');
             }
         }
         
         function checkExistingLogin() {
-            // Get all keys from localStorage and sessionStorage
             const allKeys = [...Object.keys(localStorage), ...Object.keys(sessionStorage)];
             
-            // Find login data for any user
             for (const key of allKeys) {
                 if (key.includes('loginData')) {
                     try {
                         const storage = key.startsWith('multiAI_') ? localStorage : sessionStorage;
                         const data = JSON.parse(storage.getItem(key));
                         
-                        // Check if login has expired
                         if (data.expiry && data.expiry < new Date().getTime()) {
-                            // Clear expired login
                             storage.removeItem(key);
                             continue;
                         }
                         
-                        // Auto-login with this user
                         currentUserEmail = data.email;
                         isLoggedIn = true;
                         isAdmin = data.isAdmin || false;
@@ -1016,11 +1012,9 @@
         function clearUserData() {
             if (!currentUserEmail) return;
             
-            // Clear user-specific data
             const userHash = btoa(currentUserEmail).replace(/[^a-zA-Z0-9]/g, '_');
             const prefix = `multiAI_${userHash}_`;
             
-            // Remove all user-specific keys
             Object.keys(localStorage).forEach(key => {
                 if (key.startsWith(prefix)) {
                     localStorage.removeItem(key);
@@ -1079,7 +1073,7 @@
                 });
             }
             
-            // API Config modal (only for admin)
+            // API Config button
             if (openApiConfigBtn) {
                 openApiConfigBtn.addEventListener('click', () => {
                     if (isAdmin) {
@@ -1109,17 +1103,11 @@
                 return;
             }
             
-            // For public users - any email/password works (except admin credentials)
             if (email === ADMIN_EMAIL && password === ADMIN_PASSWORD) {
-                // Admin login
                 handleSuccessfulLogin(email, true, rememberMe);
-                
             } else if (email && password) {
-                // Public user login (any credentials work)
                 handleSuccessfulLogin(email, false, rememberMe);
-                
             } else {
-                // Invalid credentials
                 loginError.textContent = 'Invalid email or password';
                 loginError.style.display = 'block';
                 loginEmail.style.borderColor = '#ef4444';
@@ -1134,10 +1122,7 @@
             loginError.style.display = 'none';
             loginModal.classList.remove('active');
             
-            // Save user-specific login state
             saveUserLoginState(email, isAdminUser, rememberMe);
-            
-            // Update UI
             updateUIForLoggedInUser(isAdminUser);
             
             showNotification(isAdminUser ? 
@@ -1147,7 +1132,6 @@
         
         // ========== LOGOUT FUNCTIONALITY ==========
         function addLogoutButton() {
-            // Check if logout button already exists
             if (document.getElementById('logoutBtn')) return;
             
             const logoutBtn = document.createElement('button');
@@ -1158,7 +1142,6 @@
             
             logoutBtn.addEventListener('click', handleLogout);
             
-            // Insert after API config button
             const headerActions = document.querySelector('.header-content > div:last-child');
             if (headerActions) {
                 headerActions.appendChild(logoutBtn);
@@ -1166,15 +1149,12 @@
         }
         
         function handleLogout() {
-            // Clear user-specific data
             clearUserData();
             
-            // Reset state
             isLoggedIn = false;
             isAdmin = false;
             currentUserEmail = '';
             
-            // Update UI
             userInput.disabled = true;
             userInput.placeholder = "Please login to use the AI assistant...";
             sendBtn.disabled = true;
@@ -1184,17 +1164,14 @@
                 openApiConfigBtn.style.display = 'none';
             }
             
-            // Remove logout button
             const logoutBtn = document.getElementById('logoutBtn');
             if (logoutBtn) logoutBtn.remove();
             
-            // Reset AI selector
             aiButtons.forEach(btn => btn.classList.remove('active'));
             const autoBtn = document.querySelector('.ai-btn[data-ai="auto"]');
             if (autoBtn) autoBtn.classList.add('active');
             selectedAI = 'auto';
             
-            // Update status
             statusText.textContent = 'Not Logged In';
             statusIndicator.querySelector('i').style.color = '#ef4444';
             apiStatusText.textContent = 'Please login to use the assistant';
@@ -1205,29 +1182,22 @@
             aiIcon.innerHTML = '<i class="fas fa-magic"></i>';
             aiName.textContent = 'Auto AI Selector';
             
-            // Show logout message
             addMessage('You have been logged out. Please login again to use the AI assistant.', 'ai', 'system');
             showNotification('Logged out successfully', 'info');
-            
-            // Show login modal
             loginModal.classList.add('active');
         }
         
         function updateUIForLoggedInUser(isAdminUser) {
-            // Enable input and send button
             userInput.disabled = false;
             userInput.placeholder = "Type your message here... (Press Shift+Enter for new line)";
             sendBtn.disabled = false;
             
-            // Update status
             statusText.textContent = 'Ready';
             statusIndicator.querySelector('i').style.color = '#10a37f';
             
-            // Add logout button
             addLogoutButton();
             
             if (isAdminUser) {
-                // Admin UI
                 siteTitle.textContent = 'Multi-AI Assistant (Admin)';
                 if (openApiConfigBtn) {
                     openApiConfigBtn.style.display = 'block';
@@ -1237,7 +1207,6 @@
                 apiModeIndicator.className = 'api-mode-indicator active';
                 aiDescription.textContent = 'Admin mode - All AI services available';
             } else {
-                // Public user UI
                 siteTitle.textContent = 'Multi-AI Assistant';
                 if (openApiConfigBtn) {
                     openApiConfigBtn.style.display = 'none';
@@ -1248,7 +1217,6 @@
                 aiDescription.textContent = 'Public access - Real AI services';
             }
             
-            // Add welcome message to chat
             const rememberMe = rememberMeCheckbox ? rememberMeCheckbox.checked : false;
             const welcomeMsg = isAdminUser 
                 ? `Welcome Admin! You have full access to all AI services. ${rememberMe ? '(Remembered for 30 days)' : ''}`
@@ -1265,7 +1233,6 @@
             
             const lowerQuery = query.toLowerCase();
             
-            // Priority 1: Coding/Math → DeepSeek
             const codingPatterns = [
                 /code|program|function|algorithm|debug|javascript|python|html|css|java|c\+\+|react|vue|angular|node|express|sql|database|api|git|terminal|command|syntax|error|bug|fix/i,
                 /implement|function|class|object|array|loop|variable|const|let|var|return|async|await|promise|callback|module|import|export/i,
@@ -1282,7 +1249,6 @@
                 return 'deepseek';
             }
             
-            // Priority 2: Images/Visual → Gemini
             const imagePatterns = [
                 /image|picture|photo|visual|draw|generate.*image|describe.*image|analyze.*image/i,
                 /what.*(see|shown).*(image|picture)|vision|look.*like|appearance|design|art/i,
@@ -1293,7 +1259,6 @@
                 return 'gemini';
             }
             
-            // Priority 3: Writing/Creative → ChatGPT
             const writingPatterns = [
                 /write|essay|story|poem|creative|article|blog|email|letter|content|brainstorm/i,
                 /paraphrase|rewrite|translate|summary|outline|draft|edit|proofread|grammar/i,
@@ -1304,7 +1269,6 @@
                 return 'chatgpt';
             }
             
-            // Default to ChatGPT
             return 'chatgpt';
         }
         
@@ -1348,27 +1312,20 @@
             const message = userInput.value.trim();
             if (!message || isProcessing) return;
             
-            // Add user message
             addMessage(message, 'user');
-            
-            // Clear input
             userInput.value = '';
             userInput.style.height = 'auto';
             
-            // Determine AI
             const aiToUse = determineAI(message);
-            
-            // Show typing
             showTypingIndicator(aiToUse);
             
-            // Set state
             isProcessing = true;
             sendBtn.disabled = true;
             updateStatus('processing', `Processing with ${aiToUse}...`);
             
             try {
-                // Always use real API calls (no demo mode)
-                const response = await callRealAPI(message, aiToUse);
+                // Use enhanced API call with better CORS handling
+                const response = await callRealAPIWithCORS(message, aiToUse);
                 
                 removeTypingIndicator();
                 addMessage(response, 'ai', aiToUse);
@@ -1379,16 +1336,26 @@
                 console.error('API Error:', error);
                 removeTypingIndicator();
                 
-                // Specific error messages
+                // Enhanced error messages
                 let errorMsg = '';
-                if (error.message.includes('API key not configured')) {
-                    errorMsg = `The ${aiToUse} API key is not configured. Please check your API settings.`;
-                } else if (error.message.includes('Failed to fetch')) {
-                    errorMsg = `Network error. Please check your internet connection and try again.`;
+                if (error.message.includes('CORS') || error.message.includes('Network')) {
+                    errorMsg = 'CORS issue detected. Trying alternative method...';
+                    // Try one more time with different proxy
+                    try {
+                        const retryResponse = await retryWithAlternativeProxy(message, aiToUse);
+                        addMessage(retryResponse, 'ai', aiToUse);
+                        updateStatus('ready', 'Ready');
+                        showNotification('Connected via proxy', 'info');
+                        return;
+                    } catch (retryError) {
+                        errorMsg = 'Unable to connect to AI service. Please try again later or check your API keys.';
+                    }
+                } else if (error.message.includes('API key')) {
+                    errorMsg = `The ${aiToUse} API key is not configured or invalid.`;
                 } else if (error.message.includes('rate limit')) {
-                    errorMsg = `API rate limit exceeded. Please wait a moment and try again.`;
+                    errorMsg = 'API rate limit exceeded. Please wait a moment.';
                 } else {
-                    errorMsg = `Error: ${error.message}. Please try again.`;
+                    errorMsg = `Error: ${error.message}`;
                 }
                 
                 addMessage(errorMsg, 'ai', aiToUse);
@@ -1402,15 +1369,17 @@
             }
         }
         
-        // ========== REAL API CALLS ==========
-        async function callRealAPI(message, aiType) {
+        // ========== ENHANCED API CALL WITH CORS HANDLING ==========
+        async function callRealAPIWithCORS(message, aiType) {
+            // Check API keys
+            if (!validateAPIKey(aiType)) {
+                throw new Error(`API key not configured for ${aiType}`);
+            }
+            
             let url, headers, body;
             
             switch(aiType) {
                 case 'chatgpt':
-                    if (!ADMIN_API_KEYS.openai || !ADMIN_API_KEYS.openai.startsWith('sk-')) {
-                        throw new Error('OpenAI API key not configured');
-                    }
                     url = 'https://api.openai.com/v1/chat/completions';
                     headers = {
                         'Authorization': `Bearer ${ADMIN_API_KEYS.openai}`,
@@ -1419,15 +1388,12 @@
                     body = JSON.stringify({
                         model: 'gpt-3.5-turbo',
                         messages: [{ role: 'user', content: message }],
-                        max_tokens: 2000,
+                        max_tokens: 1500,
                         temperature: 0.7
                     });
                     break;
                     
                 case 'deepseek':
-                    if (!ADMIN_API_KEYS.deepseek || !ADMIN_API_KEYS.deepseek.startsWith('sk-')) {
-                        throw new Error('DeepSeek API key not configured');
-                    }
                     url = 'https://api.deepseek.com/chat/completions';
                     headers = {
                         'Authorization': `Bearer ${ADMIN_API_KEYS.deepseek}`,
@@ -1436,15 +1402,12 @@
                     body = JSON.stringify({
                         model: 'deepseek-chat',
                         messages: [{ role: 'user', content: message }],
-                        max_tokens: 2000,
+                        max_tokens: 1500,
                         temperature: 0.7
                     });
                     break;
                     
                 case 'gemini':
-                    if (!ADMIN_API_KEYS.gemini || !ADMIN_API_KEYS.gemini.startsWith('AIza')) {
-                        throw new Error('Gemini API key not configured');
-                    }
                     url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${ADMIN_API_KEYS.gemini}`;
                     headers = { 'Content-Type': 'application/json' };
                     body = JSON.stringify({
@@ -1452,72 +1415,176 @@
                             parts: [{ text: message }]
                         }],
                         generationConfig: {
-                            maxOutputTokens: 2000,
+                            maxOutputTokens: 1500,
                             temperature: 0.7
                         }
                     });
                     break;
             }
             
+            // Try multiple approaches
             try {
-                // Try direct API call first
-                const response = await fetch(url, {
+                // 1. First try direct call
+                return await makeAPICall(url, headers, body, aiType, false);
+            } catch (directError) {
+                console.log('Direct call failed, trying CORS proxies...');
+                
+                // 2. Try each CORS proxy
+                for (let i = 0; i < CORS_PROXIES.length; i++) {
+                    try {
+                        currentProxyIndex = i;
+                        return await makeAPICall(url, headers, body, aiType, true);
+                    } catch (proxyError) {
+                        console.log(`Proxy ${i} failed:`, proxyError.message);
+                        continue;
+                    }
+                }
+                
+                throw new Error('All connection methods failed');
+            }
+        }
+        
+        async function makeAPICall(url, headers, body, aiType, useProxy) {
+            let finalUrl = url;
+            let finalHeaders = { ...headers };
+            
+            if (useProxy) {
+                finalUrl = CORS_PROXIES[currentProxyIndex] + encodeURIComponent(url);
+                // Remove Authorization header for some proxies
+                if (CORS_PROXIES[currentProxyIndex].includes('corsproxy.io')) {
+                    delete finalHeaders['Authorization'];
+                }
+            }
+            
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
+            
+            try {
+                const response = await fetch(finalUrl, {
                     method: 'POST',
-                    headers,
-                    body
+                    headers: finalHeaders,
+                    body: body,
+                    signal: controller.signal,
+                    mode: 'cors'
                 });
                 
+                clearTimeout(timeoutId);
+                
                 if (!response.ok) {
-                    const errorData = await response.json().catch(() => ({}));
-                    throw new Error(`API Error ${response.status}: ${errorData.error?.message || response.statusText}`);
+                    const errorText = await response.text();
+                    console.error('API Error Response:', errorText);
+                    throw new Error(`API Error ${response.status}: ${response.statusText}`);
                 }
                 
                 const data = await response.json();
                 
-                // Parse response based on AI type
+                if (aiType === 'gemini') {
+                    if (data.candidates?.[0]?.content?.parts?.[0]?.text) {
+                        return data.candidates[0].content.parts[0].text;
+                    }
+                    throw new Error('Invalid Gemini response format');
+                } else {
+                    if (data.choices?.[0]?.message?.content) {
+                        return data.choices[0].message.content;
+                    }
+                    throw new Error('Invalid API response format');
+                }
+            } catch (error) {
+                if (error.name === 'AbortError') {
+                    throw new Error('Request timeout');
+                }
+                throw error;
+            } finally {
+                clearTimeout(timeoutId);
+            }
+        }
+        
+        async function retryWithAlternativeProxy(message, aiType) {
+            // Try a different approach - use fetch with no-cors mode
+            console.log('Trying alternative connection method...');
+            
+            let url, headers, body;
+            
+            switch(aiType) {
+                case 'chatgpt':
+                    url = 'https://api.openai.com/v1/chat/completions';
+                    headers = {
+                        'Authorization': `Bearer ${ADMIN_API_KEYS.openai}`,
+                        'Content-Type': 'application/json'
+                    };
+                    body = JSON.stringify({
+                        model: 'gpt-3.5-turbo',
+                        messages: [{ role: 'user', content: message }],
+                        max_tokens: 1000,
+                        temperature: 0.7
+                    });
+                    break;
+                    
+                case 'deepseek':
+                    url = 'https://api.deepseek.com/chat/completions';
+                    headers = {
+                        'Authorization': `Bearer ${ADMIN_API_KEYS.deepseek}`,
+                        'Content-Type': 'application/json'
+                    };
+                    body = JSON.stringify({
+                        model: 'deepseek-chat',
+                        messages: [{ role: 'user', content: message }],
+                        max_tokens: 1000,
+                        temperature: 0.7
+                    });
+                    break;
+                    
+                case 'gemini':
+                    url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${ADMIN_API_KEYS.gemini}`;
+                    headers = { 'Content-Type': 'application/json' };
+                    body = JSON.stringify({
+                        contents: [{
+                            parts: [{ text: message }]
+                        }],
+                        generationConfig: {
+                            maxOutputTokens: 1000,
+                            temperature: 0.7
+                        }
+                    });
+                    break;
+            }
+            
+            // Try a different CORS proxy service
+            const altProxy = 'https://cors-anywhere.herokuapp.com/';
+            try {
+                const response = await fetch(altProxy + url, {
+                    method: 'POST',
+                    headers: headers,
+                    body: body,
+                    mode: 'cors'
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`Proxy error: ${response.status}`);
+                }
+                
+                const data = await response.json();
+                
                 if (aiType === 'gemini') {
                     return data.candidates[0].content.parts[0].text;
                 } else {
                     return data.choices[0].message.content;
                 }
-                
-            } catch (directError) {
-                console.error('Direct API call failed:', directError);
-                
-                // Try with CORS proxy
-                try {
-                    return await callWithCorsProxy(url, headers, body, aiType);
-                } catch (proxyError) {
-                    console.error('CORS proxy also failed:', proxyError);
-                    throw directError; // Throw original error
-                }
+            } catch (error) {
+                throw new Error(`Alternative proxy failed: ${error.message}`);
             }
         }
         
-        async function callWithCorsProxy(url, headers, body, aiType) {
-            const proxyUrl = CORS_PROXIES[currentProxyIndex] + encodeURIComponent(url);
-            
-            const response = await fetch(proxyUrl, {
-                method: 'POST',
-                headers: {
-                    ...headers,
-                    'Content-Type': 'application/json'
-                },
-                body
-            });
-            
-            if (!response.ok) {
-                // Try next proxy
-                currentProxyIndex = (currentProxyIndex + 1) % CORS_PROXIES.length;
-                throw new Error(`Service temporarily unavailable`);
-            }
-            
-            const data = await response.json();
-            
-            if (aiType === 'gemini') {
-                return data.candidates[0].content.parts[0].text;
-            } else {
-                return data.choices[0].message.content;
+        function validateAPIKey(aiType) {
+            switch(aiType) {
+                case 'chatgpt':
+                    return ADMIN_API_KEYS.openai && ADMIN_API_KEYS.openai.startsWith('sk-');
+                case 'deepseek':
+                    return ADMIN_API_KEYS.deepseek && ADMIN_API_KEYS.deepseek.startsWith('sk-');
+                case 'gemini':
+                    return ADMIN_API_KEYS.gemini && ADMIN_API_KEYS.gemini.startsWith('AIza');
+                default:
+                    return false;
             }
         }
         
@@ -1553,7 +1620,6 @@
         }
         
         function formatMessage(text) {
-            // Convert markdown-style code blocks
             let formattedText = text
                 .replace(/```(\w+)?\n([\s\S]*?)```/g, 
                     '<pre><code class="language-$1">$2</code></pre>')
@@ -1561,7 +1627,6 @@
                     '<code>$1</code>')
                 .replace(/\n/g, '<br>');
             
-            // Convert URLs to links
             formattedText = formattedText.replace(
                 /(https?:\/\/[^\s<]+[^\s<.,:;!?)])/g, 
                 '<a href="$1" target="_blank" rel="noopener">$1</a>'
@@ -1623,7 +1688,6 @@
         }
         
         function showNotification(message, type = 'info') {
-            // Remove existing notification
             const existing = document.querySelector('.notification');
             if (existing) existing.remove();
             
@@ -1636,7 +1700,6 @@
             
             document.body.appendChild(notification);
             
-            // Auto-remove after 3 seconds
             setTimeout(() => {
                 notification.style.opacity = '0';
                 notification.style.transform = 'translateX(100%)';
